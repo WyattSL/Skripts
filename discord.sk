@@ -1,0 +1,14 @@
+## NOTICE
+## In the skript config, you must enable links for this to function correctly.
+
+options:
+    invite = "https://discord.gg/Wyatt"
+    permission = "" # Leave blank to disable
+
+command /discord:
+    trigger;
+        if permission is set:
+            player has permission {@permission}
+            send {@invite} to player
+        else:
+            send {@invite} to player
