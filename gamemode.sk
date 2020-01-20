@@ -1,0 +1,109 @@
+## Created By Wyatt Lipscomb
+
+command /gmc [<player>]:
+    usage: /gmc [player]
+    trigger:
+        if arg-1 is set:
+            set {_p} to arg-1
+            player has permission "gamemode.creative"
+            player has permission "gamemode.others"
+            set {_r} to true
+        else:
+            set {_p} to player
+            player has permission "gamemode.creative"
+        {_r} is true
+        if {_p}'s gamemode is creative:
+            send "Player is already in creative." to player
+        else:
+            set {_p}'s gamemode to creative
+            if {_p} is not player:
+                send "Your gamemode was set to creative by %player%" to {_p}
+                send "%player%'s gamemode has been set to creative." to player
+            else:
+                send "Your gamemode has been set to creative."
+
+command /gms [<player>]:
+    usage: /gms [player]
+    trigger:
+        if arg-1 is set:
+            set {_p} to arg-1
+            player has permission "gamemode.survival"
+            player has permission "gamemode.others"
+            set {_r} to true
+        else:
+            set {_p} to player
+            player has permission "gamemode.survival"
+        {_r} is true
+        if {_p}'s gamemode is survival:
+            send "Player is already in survival." to player
+        else:
+            set {_p}'s gamemode to survival
+            if {_p} is not player:
+                send "Your gamemode was set to survival by %player%" to {_p}
+                send "%player%'s gamemode has been set to survival." to player
+            else:
+                send "Your gamemode has been set to survival."
+
+command /gma [<player>]:
+    usage: /gma [player]
+    trigger:
+        if arg-1 is set:
+            set {_p} to arg-1
+            player has permission "gamemode.adventure"
+            player has permission "gamemode.others"
+            set {_r} to true
+        else:
+            set {_p} to player
+            player has permission "gamemode.adventure"
+        {_r} is true
+        if {_p}'s gamemode is adventure:
+            send "Player is already in adventure." to player
+        else:
+            set {_p}'s gamemode to adventure
+            if {_p} is not player:
+                send "Your gamemode was set to adventure by %player%" to {_p}
+                send "%player%'s gamemode has been set to adventure." to player
+            else:
+                send "Your gamemode has been set to adventure."
+
+command /gmsp [<player>]:
+    usage: /gmsp [player]
+    trigger:
+        if arg-1 is set:
+            set {_p} to arg-1
+            player has permission "gamemode.spectator"
+            player has permission "gamemode.others"
+            set {_r} to true
+        else:
+            set {_p} to player
+            player has permission "gamemode.spectator"
+        {_r} is true
+        if {_p}'s gamemode is spectator:
+            send "Player is already in spectator mode." to player
+        else:
+            set {_p}'s gamemode to spectator
+            if {_p} is not player:
+                send "Your gamemode was set to spectator mode by %player%" to {_p}
+                send "%player%'s gamemode has been set to spectator mode." to player
+            else:
+                send "Your gamemode has been set to spectator mode."
+
+command /gm [<player>]:
+    usage: /gmsp
+    trigger:
+        if arg-1 is set:
+            set {_p} to arg-1
+            player has permission "gamemode.others"
+            set {_r} to true
+        else:
+            set {_p} to player
+            set {_r} to true
+        {_r} is true
+        if {_p}'s gamemode is survival:
+            player has permission "gamemode.creative"
+            set {_p}'s gamemode to creative
+            send "Your gamemode was set to creative." to {_p}
+        else:
+            player has permission "gamemode.survival"
+            set {_p}'s gamemode to survival
+            send "Your gamemode was set to survival." to {_p}
