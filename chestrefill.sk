@@ -1,0 +1,247 @@
+# Skript developed for Ikea by WyattL#3477.
+# No addons required.
+
+# Commands:
+# /chestrefill, use /chestrefill help for subcommand usage.
+
+# Permissions:
+# chestrefill.use - Allows the user to set, view, and delete chests from sets. Useful for builders.
+# chestrefill.modify - Allows the user to modify the items in a set, refill times, and clear sets.
+
+# Accepted storage containers: chest, trapped chest, barrel
+
+
+
+function IsValidContainer(b:Block) :: boolean:
+    if {_b} is a chest:
+        return true
+    if {_b} is a trapped chest:
+        return true
+    if {_b} is a barrel:
+        return true
+    return false
+
+function ResetChest(s:Text, b:Block):
+    set {_min} to {chestrefill.min::%{_s}%}
+    set {_max} to {chestrefill.max::%{_s}%}
+    clear {_b}'s inventory
+    set {_itemCount} to a random integer between {_min} and {_max}
+    loop {_itemCount} times:
+        set {_i} to a random item out of {chestrefill.items::%{_s}%::*}
+        add {_i} to {_b}'s inventory
+
+function ResetSet(s:Text):
+    set {chestrefill.lastrefill::%{_s}%} to now
+    loop {chestrefill.sets::%{_s}%::*}:
+        ResetChest({_s}, block at loop-value)
+
+command /chestrefill [<text="help">] [<text>] [<text>]:
+    permission: chestrefill.use
+    usage: /chestrefill help
+    description: Chest refill base command.
+    trigger:
+        if arg-1 is "help":
+            send "ChestRefill Commands"
+            send "/chestrefill setchest <set> | Adds the chest you are looking at to the specified set."
+            send "/chestrefill chests <set> | View all the chests in the specified set."
+            send "/chestrefill delchest | Removes the chest you are looking at from it's set."
+            send "/chestrefill sets | View all available sets."
+            if player has permission "chestrefill.modify":
+                send "Elevated Commands"
+                send "/chestrefill additem <set> | Adds the item you are holding to the specified set."
+                send "/chestrefill items <set> | View all the items in the specified set."
+                send "/chestrefill delitem <set> <integer> | Removes the specified item from the specified set."
+                send "/chestrefill time <set> <timespan> | Sets the refill time for the specified set."
+                send "/chestrefill setmin <set> <integer> | Sets the minimum amount of items to draw from the set."
+                send "/chestrefill setmax <set> <integer> | Sets the maximum amount of items to draw from the set."
+        else if arg-1 is "setchest":
+            set {_b} to the target block
+            if IsValidContainer({_b}) is not true:
+                send "Block '%type of {_b}% at %{_b}'s position% is not a valid storage container."
+                stop
+            if arg-2 is not set:
+                send "Usage: /chestrefill setchest <set> | Invalid set given."
+                stop
+            if arg-3 is set:
+                send "Error: Too many arguments! Usage: /chestrefill setchest <set> | Do not use spaces in set names."
+                stop
+            if {chestrefill.sets::%arg-2%::*} contains {_b}'s position:
+                send "That block is already part of that set!"
+                stop
+            loop {chestrefill.setMap::*}:
+                remove {_b}'s position from {chestrefill.sets::%loop-value%::*}
+            
+            if {chestrefill.setMap::*} does not contain arg-2:
+                add arg-2 to {chestrefill.setMap::*}
+                set {chestrefill.time::%arg-2%} to 5 days
+                set {chestrefill.min::%arg-2%} to 0
+                set {chestrefill.max::%arg-2%} to 0
+                set {chestrefill.lastrefill::%arg-2%} to now
+            
+            add {_b}'s position to {chestrefill.sets::%arg-2%::*}
+            send "Block '%type of {_b}%' @ %{_b}'s position% has been added to set '%arg-2%'."
+        else if arg-1 is "chests":
+            if arg-2 is not set:
+                send "Usage: /chestrefill chests <set> | Invalid set given."
+                stop
+            if {chestrefill.setMap::*} does not contain arg-2:
+                send "Usage: /chestrefill chests <set> | Unknown set given."
+                stop
+            if size of {chestrefill.sets::%arg-2%::*} < 1:
+                send "Usage: /chestrefill chests <set> | Empty set given."
+                stop
+            loop {chestrefill.sets::%arg-2%::*}:
+                send "##%loop-index% '%type of block at loop-value%' @ %loop-value%"
+        else if arg-1 is "delchest":
+            set {_b} to the target block
+            if IsValidContainer({_b}) is not true:
+                send "Block '%type of {_b}% at %{_b}'s position% is not a valid storage container."
+                stop
+            set {_r} to false
+            loop {chestrefill.setMap::*}:
+                if {chestrefill.sets::%loop-value%::*} contains {_b}'s position:
+                    set {_r} to loop-value
+                    remove {_b}'s position from {chestrefill.sets::%loop-value%::*}
+                    stop loop
+            if {_r} is not false:
+                send "Block '%type of {_b}%' @ %{_b}'s position% was removed from set '%{_r}%'."
+            else:
+                send "Block '%type of {_b}%' @ %{_b}'s position% is not part of any sets!"
+        else if arg-1 is "sets":
+            loop {chestrefill.setMap::*}:
+                send "##%loop-index% '%loop-value%' with %size of {chestrefill.sets::%loop-value%::*}% chests and %size of {chestrefill.items::%loop-value%::*}% items which will reset every %{chestrefill.time::%loop-value%}% and select between %{chestrefill.min::%loop-value%}% and %{chestrefill.max::%loop-value%}% items."
+        else if arg-1 is "additem":
+            if player does not have permission "chestrefill.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /chestrefill additem <set> | Invalid set given."
+                stop
+            if {chestrefill.setMap::*} does not contain arg-2:
+                send "Usage: /chestrefill additem <set> | Unknown set given."
+                stop
+            add player's tool to {chestrefill.items::%arg-2%::*}
+            send "Item '%player's tool%' added to set '%arg-2%'."
+        else if arg-1 is "items":
+            if player does not have permission "chestrefill.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /chestrefill items <set> | Invalid set given."
+                stop
+            if {chestrefill.setMap::*} does not contain arg-2:
+                send "Usage: /chestrefill items <set> | Unknown set given."
+                stop
+            if size of {chestrefill.items::%arg-2%::*} < 1:
+                send "Usage: /chestrefill items <set> | Empty set given."
+                stop
+            clear {_itemstore::*}
+            loop {chestrefill.items::%arg-2%::*}:
+                add 1 to {_itemstore::%loop-value%}
+            set {_dis} to 100 / (size of {chestrefill.items::%arg-2%::*})
+            loop {chestrefill.items::%arg-2%::*}:
+                send "##%loop-index%   %loop-value%   %{_dis} * {_itemstore::%loop-value%}%%%"
+        else if arg-1 is "delitem":
+            if player does not have permission "chestrefill.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /chestrefill delitem <set> <integer> | Invalid set given."
+                stop
+            if {chestrefill.setMap::*} does not contain arg-2:
+                send "Usage: /chestrefill delitem <set> <integer> | Unknown set given."
+                stop
+            if size of {chestrefill.items::%arg-2%::*} < 1:
+                send "Usage: /chestrefill delitem <set> <integer> | Empty set given."
+                stop
+            if arg-3 is not set:
+                send "Usage: /chestrefill delitem <set> <integer> | Invalid integer given."
+                stop
+            set {_i} to arg-3 parsed as integer
+            if {_i} is not set:
+                send "Usage: /chestrefill delitem <set> <integer> | Invalid integer given."
+                stop
+            set {_item} to {chestrefill.items::%arg-2%::%{_i}%}
+            if {_item} is not set:
+                send "Usage: /chestrefill delitem <set> <integer> | Integer is not a item."
+                stop
+            clear {chestrefill.items::%arg-2%::%{_i}%}
+            send "Deleted item '%{_item}%' from set '%arg-2%'."
+        else if arg-1 is "time":
+            if player does not have permission "chestrefill.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /chestrefill time <set> <timespan> | Invalid set given."
+                stop
+            if {chestrefill.setMap::*} does not contain arg-2:
+                send "Usage: /chestrefill time <set> <timespan> | Unknown set given."
+                stop
+            if size of {chestrefill.items::%arg-2%::*} < 1:
+                send "Usage: /chestrefill time <set> <timespan> | Empty set given."
+                stop
+            if arg-3 is not set:
+                send "Usage: /chestrefill time <set> <timespan> | Invalid timespan given."
+                stop
+            set {_i} to arg-3 parsed as timespan
+            if {_i} is not set:
+                send "Usage: /chestrefill time <set> <timespan> | Invalid timespan given."
+                stop
+            if {_i} is less than 5 seconds:
+                send "Error: Timespan cannot be less than 5 seconds."
+                stop
+            set {chestrefill.time::%arg-2%} to {_i}
+            send "Set '%arg-2%' will refill every %{_i}%."
+        else if arg-1 is "setmin":
+            if player does not have permission "chestrefill.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /chestrefill setmin <set> <integer> | Invalid set given."
+                stop
+            if {chestrefill.setMap::*} does not contain arg-2:
+                send "Usage: /chestrefill setmin <set> <integer> | Unknown set given."
+                stop
+            if size of {chestrefill.items::%arg-2%::*} < 1:
+                send "Usage: /chestrefill setmin <set> <integer> | Empty set given."
+                stop
+            if arg-3 is not set:
+                send "Usage: /chestrefill setmin <set> <integer> | Invalid integer given."
+                stop
+            set {_i} to arg-3 parsed as integer
+            if {_i} is not set:
+                send "Usage: /chestrefill setmin <set> <integer> | Invalid integer given."
+                stop
+            set {chestrefill.min::%arg-2%} to {_i}
+            send "Set '%arg-2%' will refill with a minimum of %{_i}% items."
+        else if arg-1 is "setmax":
+            if player does not have permission "chestrefill.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /chestrefill setmax <set> <integer> | Invalid set given."
+                stop
+            if {chestrefill.setMap::*} does not contain arg-2:
+                send "Usage: /chestrefill setmax <set> <integer> | Unknown set given."
+                stop
+            if size of {chestrefill.items::%arg-2%::*} < 1:
+                send "Usage: /chestrefill setmax <set> <integer> | Empty set given."
+                stop
+            if arg-3 is not set:
+                send "Usage: /chestrefill setmax <set> <integer> | Invalid integer given."
+                stop
+            set {_i} to arg-3 parsed as integer
+            if {_i} is not set:
+                send "Usage: /chestrefill setmax <set> <integer> | Invalid integer given."
+                stop
+            set {chestrefill.max::%arg-2%} to {_i}
+            send "Set '%arg-2%' will refill with a maximum of %{_i}% items."
+        else:
+            send "Invalid command: /chestrefill help."
+
+every 5 seconds:
+    loop {chestrefill.setMap::*}:
+        set {_lr} to {chestrefill.lastrefill::%loop-value%}
+        set {_rt} to {chestrefill.time::%loop-value%}
+        if {_lr} is less than {_rt} ago:
+            ResetSet(loop-value)
