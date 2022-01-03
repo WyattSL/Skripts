@@ -1,0 +1,327 @@
+# Skript developed for Ikea by WyattL#3477.
+# No addons required.
+
+# Commands:
+# /warn <player> <reason> - Warn the target player, suggested for staff members.
+# /warns [player] - View the given player's warnings. If no player is given, view your own warnings. Players must have "punishments.warn" to view other player's warnings.
+# /removewarn <player> <integer> - Remove the specified warning from the target player. You cannot remove your own warnings.
+# /mute <player> <time> <reason> - Mute the target player for the given time.
+# /mutes [player] - View the given player's mutes, active or expired. Mutes that are manually removed are not shown.
+# /unmute <player> <integer> - Unmute the player, or remove a past, expired mute. You cannot remove your own mutes.
+# /ban <player> <time> <reason> - Ban the target player for the given time.
+# /bans [player] - View the given player's ban, active or expired. Bans that are manually removed are not shown.
+# /unban <player> <integer> - Unban the player, or remove a past, expired ban. You cannot remove your own bans.
+
+
+# Permissions:
+# punishments.warn - Issue a warning to a player.
+# punishments.warn.immune - Prevent this player from being warned.
+# punishments.warn.viewstaff - View the staff member who warned them. If omitted, players cannot see who punished them.
+# punishments.removewarn - Remove other player's warnings, cannot remove their own warnings.
+# punishments.mute - Issue mutes to players.
+# punishments.mute.immune - Prevent this player from being muted.
+# punishments.mute.viewstaff - View the staff member who muted them. If omitted, players cannot see who punished them.
+# punishments.ban - Issue a ban to a player.
+# punishments.ban.immune - Prevent this player from being banned.
+# punishments.ban.viewstaff - View the staff member who banned them. If omitted, players cannot see who punished them.
+# punishments.ban.removeban - Remove other player's bans, cannot remove their own ban.
+
+
+
+function PP(p1:player, p2:player) :: string:
+    if {_p1} is {_p2}:
+        return "You have"
+    return "%{_p2}% has"
+
+function ConvPast(s:text) :: string:
+    if lowercase last 3 characters of {_s} is "ban":
+        return "%{_s}%ned"
+    if the last 1 characters of {_s} is "e":
+        return "%{_s}%d"
+    return "%{_s}%ed"
+
+function BroadcastPunishment(p:offline player, t:text, r:text, d:timespan = 0.1 days):
+    set {_ds} to ""
+    if {_d} is not 0.1 days:
+        set {_ds} to " for %{_d}% "
+    broadcast "&7 "
+    broadcast "&c%{_t}%"
+    broadcast "&0-------------------------------------"
+    broadcast "&a%{_p}% &ewas %lowercase ConvPast({_t})%&a for &e%{_t}%&e I guess?"
+    broadcast "&7 "
+
+
+
+command /warn [<offline player>] [<text>]:
+    usage: /warn <player> <reason>
+    description: Issue a warning to a player.
+    permission: punishments.warn
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /warn <player> <reason> | Invalid player given."
+            stop
+        if arg-2 is not set:
+            send "&cUsage: /warn <player> <reason> | Reason not given."
+            stop
+        if arg-1 has permission "punishments.warn.immune":
+            send "&cError: This player cannot be warned."
+            stop
+        log "%command sender% has warned %arg 1% for %arg 2%"
+        BroadcastPunishment(arg-1, "Warn", arg-2)
+        set {_cs} to player's uuid
+        if command sender is console:
+            set {_cs} to "CONSOLE"
+        add "%{_cs}%$||$%arg 2%$||$%unix timestamp of now%" to {punishments.warns::%arg-1's uuid%::*}
+
+command /warns [<offline player=%player%>]:
+    usage: /warn [player]
+    description: View a player's warnings.
+    aliases: /warnings
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /warns [player] | Invalid player given."
+            stop
+        if arg-1 is not player:
+            command sender is not console
+            player does not have permission "punishments.warn"
+            send "&cInsuffcient permission!"
+            stop
+        if size of {punishments.warns::%arg-1's uuid%::*} is less than 1:
+            send "&c%PP(player, arg-1)% no warnings."
+            stop
+        loop {punishments.warns::%arg-1's uuid%::*}:
+            set {_s::*} to loop-value split by "$||$"
+            set {_pm} to ""
+            set {_p} to {_s::1} parsed as a offline player
+            if {_s::1} is "CONSOLE":
+                set {_p} to "CONSOLE"
+            if player has permission "punishments.warn.viewstaff":
+                set {_pm} to " &cby &a%{_p}%&c"
+            if command sender is console:
+                set {_pm} to " &cby &a%{_p}%&c"
+            set {_ddiff} to time since unix date of rounded {_s::3} parsed as number
+            send "&e##%loop-index%&c &d%{_ddiff}%&d ago &cfor %{_s::2}%%{_pm}%."
+
+command /removewarn [<offline player>] [<integer>]:
+    usage: /removewarn <player> <integer>
+    description: Remove a warning from a player.
+    aliases: /removewarning
+    permission: punishments.removewarn
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /removewarn <player> <integer> | Invalid player given."
+            stop
+        if arg-2 is not set:
+            send "&cUsage: /removewarn <player> <integer> | Warning ## not given."
+            stop
+        if arg-1 is player:
+            send "&cError: You cannot remove your own warnings."
+            stop
+        set {_w} to {punishments.warns::%arg-1's uuid%::%arg-2%}
+        if {_w} is not set:
+            send "&cError: Warning ##&e%arg-2%&c does not exist."
+            stop
+        clear {punishments.warns::%arg-1's uuid%::%arg-2%}
+        set {_wd::*} to {_w} split by "$||$"
+        log "%command sender% has removed warning ##%arg-2% for %arg-1% (issued by %{_wd::1} parsed as player% with reason %{_wd::2}%   %time since unix date of rounded {_wd::3} parsed as number% ago."
+        send "&aWarning ##%arg-2%&a has been removed from %arg-1%&a."
+
+command /mute [<player>] [<integer>] [<string>] [<text>]:
+    usage: /mute <player> <time> <reason>
+    description: Prevent a player from speaking in chat.
+    permission: punishments.mute
+    aliases: /silence
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /mute <player> <time> <reason> | Invalid player given."
+            stop
+        if arg-2 is not set:
+            send "&cUsage: /mute <player> <time> <reason> | Time not given."
+            stop
+        if arg-3 is not set:
+            send "&cUsage: /mute <player> <time> <reason> | Reason not given."
+            stop
+        if arg-1 has permission "punishments.mute.immune":
+            send "&cError: This player cannot be muted."
+            stop
+        set {_time} to "%arg-2% %arg-3%" parsed as timespan
+        if {_time} is not set:
+            send "&cError: Invalid timespan '%arg-2% %arg-3%'"
+            stop
+        BroadcastPunishment(arg-1, "Mute", arg-4, {_time})
+        log "%command sender% has muted %arg 1% for %arg 4% with a duration of %{_time}%"
+        if command sender is console:
+            set {_cs} to "CONSOLE"
+        else:
+            set {_cs} to player's uuid
+        add "%{_cs}%$||$%arg 4%$||$%unix timestamp of now%$||$%{_time}%" to {punishments.mutes::%arg-1's uuid%::*}
+
+command /mutes [<offline player=%player%>]:
+    usage: /mutes [player]
+    description: View a player's mutes.
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /mutes [player] | Invalid player given."
+            stop
+        if arg-1 is not player:
+            command sender is not console
+            player does not have permission "punishments.mute"
+            send "&cInsuffcient permission!"
+            stop
+        if size of {punishments.mutes::%arg-1's uuid%::*} is less than 1:
+            send "&c%PP(player, arg-1)% no mutes."
+            stop
+        loop {punishments.mutes::%arg-1's uuid%::*}:
+            set {_s::*} to loop-value split by "$||$"
+            set {_pm} to ""
+            set {_p} to {_s::1} parsed as a offline player
+            if {_s::1} is "CONSOLE":
+                set {_p} to "CONSOLE"
+            if player has permission "punishments.mute.viewstaff":
+                set {_pm} to " &cby &a%{_p}%&c"
+            if command sender is console:
+                set {_pm} to " &cby &a%{_p}%&c"
+            set {_ddiff} to time since unix date of rounded {_s::3} parsed as number
+            if {_ddiff} is greater than {_s::4} parsed as timespan:
+                set {_tr} to "&cExpired"
+            else:
+                set {_tr} to "&aActive"
+            send "&e##%loop-index%&c &d%{_ddiff}%&d ago &cfor %{_s::2}%%{_pm}%&c with a duration of &d%{_s::4} parsed as timespan%&7 (%{_tr}%&7)"
+
+command /unmute [<offline player>] [<integer>]:
+    usage: /unmute <player> <integer>
+    description: Remove a warning from a player.
+    aliases: /removemute
+    permission: punishments.mute
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /unmute <player> <integer> | Invalid player given."
+            stop
+        if arg-2 is not set:
+            send "&cUsage: /unmute <player> <integer> | Mute ## not given."
+            stop
+        if arg-1 is player:
+            send "&cError: You cannot remove your own mutes."
+            stop
+        set {_w} to {punishments.mutes::%arg-1's uuid%::%arg-2%}
+        if {_w} is not set:
+            send "&cError: Mute ##&e%arg-2%&c does not exist."
+            stop
+        clear {punishments.mutes::%arg-1's uuid%::%arg-2%}
+        set {_wd::*} to {_w} split by "$||$"
+        log "%command sender% has removed mute ##%arg-2% for %arg-1% (issued by %{_wd::1} parsed as player% with reason %{_wd::2}%   %time since unix date of rounded {_wd::3} parsed as number% ago with a duration of %{_wd::4}%"
+        send "&aMute ##%arg-2%&a has been removed from %arg-1%&a."
+
+on chat:
+    loop {punishments.mutes::%player's uuid%::*}:
+        set {_s::*} to loop-value split by "$||$"
+        set {_ddiff} to time since unix date of rounded {_s::3} parsed as number
+        if {_ddiff} is less than {_s::4} parsed as timespan:
+            cancel event
+            send "&cYou are currently muted! (/mutes)"
+            stop
+
+command /ban [<offline player>] [<integer>] [<string>] [<text>]:
+    usage: /ban <player> <time> <reason>
+    description: Prevent a player from joining the server.
+    permission: punishments.ban
+    aliases: /banish
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /ban <player> <time> <reason> | Invalid player given."
+            stop
+        if arg-2 is not set:
+            send "&cUsage: /ban <player> <time> <reason> | Time not given."
+            stop
+        if arg-3 is not set:
+            send "&cUsage: /ban <player> <time> <reason> | Reason not given."
+            stop
+        if arg-1 has permission "punishments.ban.immune":
+            send "&cError: This player cannot be banned."
+            stop
+        set {_time} to "%arg-2% %arg-3%" parsed as timespan
+        if {_time} is not set:
+            send "&cError: Invalid timespan '%arg-2% %arg-3%'"
+            stop
+        BroadcastPunishment(arg-1, "Ban", arg-4, {_time})
+        log "%command sender% has banned %arg 1% for %arg 4% with a duration of %{_time}%"
+        if command sender is console:
+            set {_cs} to "CONSOLE"
+        else:
+            set {_cs} to player's uuid
+        add "%{_cs}%$||$%arg 4%$||$%unix timestamp of now%$||$%{_time}%" to {punishments.bans::%arg-1's uuid%::*}
+        arg-1 is online
+        kick arg-1 due to "You have been banned for %arg-4%."
+
+command /bans [<offline player=%player%>]:
+    usage: /bans [player]
+    description: View a player's bans.
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /bans [player] | Invalid player given."
+            stop
+        if arg-1 is not player:
+            command sender is not console
+            player does not have permission "punishments.ban"
+            send "&cInsuffcient permission!"
+            stop
+        if size of {punishments.bans::%arg-1's uuid%::*} is less than 1:
+            send "&c%PP(player, arg-1)% no bans."
+            stop
+        loop {punishments.bans::%arg-1's uuid%::*}:
+            set {_s::*} to loop-value split by "$||$"
+            set {_pm} to ""
+            set {_p} to {_s::1} parsed as a offline player
+            if {_s::1} is "CONSOLE":
+                set {_p} to "CONSOLE"
+            if player has permission "punishments.ban.viewstaff":
+                set {_pm} to " &cby &a%{_p}%&c"
+            if command sender is console:
+                set {_pm} to " &cby &a%{_p}%&c"
+            set {_ddiff} to time since unix date of rounded {_s::3} parsed as number
+            if {_ddiff} is greater than {_s::4} parsed as timespan:
+                set {_tr} to "&cExpired"
+            else:
+                set {_tr} to "&aActive"
+            send "&e##%loop-index%&c &d%{_ddiff}%&d ago &cfor %{_s::2}%%{_pm}%&c with a duration of &d%{_s::4} parsed as timespan%&7 (%{_tr}%&7)"
+
+command /unban [<offline player>] [<integer=1>]:
+    usage: /unban <player> <integer>
+    description: Remove a ban from a player.
+    aliases: /pardon
+    permission: punishments.unban
+    trigger:
+        if arg-1 is not set:
+            send "&cUsage: /unban <player> <integer> | Invalid player given."
+            stop
+        if arg-2 is not set:
+            send "&cUsage: /unban <player> <integer> | Ban ## not given."
+            stop
+        if arg-1 is player:
+            send "&cError: You cannot remove your own bans."
+            stop
+        set {_w} to {punishments.bans::%arg-1's uuid%::%arg-2%}
+        if {_w} is not set:
+            send "&cError: Ban ##&e%arg-2%&c does not exist."
+            stop
+        clear {punishments.bans::%arg-1's uuid%::%arg-2%}
+        set {_wd::*} to {_w} split by "$||$"
+        log "%command sender% has removed ban ##%arg-2% for %arg-1% (issued by %{_wd::1} parsed as player% with reason %{_wd::2}%   %time since unix date of rounded {_wd::3} parsed as number% ago with a duration of %{_wd::4}%"
+        send "&aBan ##%arg-2%&a has been removed from %arg-1%&a."
+
+on connect:
+    loop {punishments.bans::%player's uuid%::*}:
+        set {_s::*} to loop-value split by "$||$"
+        set {_ddiff} to time since unix date of rounded {_s::3} parsed as number
+        if {_ddiff} is less than {_s::4} parsed as timespan:
+            player does not have permission "punishments.ban.immune"
+            set {_pm} to ""
+            set {_p} to {_s::1} parsed as a offline player
+            if {_s::1} is "CONSOLE":
+                set {_p} to "CONSOLE"
+            if player has permission "punishments.ban.viewstaff":
+                set {_pm} to " &cby &a%{_p}%&c"
+            if command sender is console:
+                set {_pm} to " &cby &a%{_p}%&c"
+            set {_ddiff} to time since unix date of rounded {_s::3} parsed as number
+            kick player due to "&cYou are currently banned: &d%{_ddiff}%&d ago &cfor %{_s::2}%%{_pm}%&c with a duration of &d%{_s::4} parsed as timespan%"

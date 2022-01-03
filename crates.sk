@@ -1,0 +1,157 @@
+# Skript developed for Ikea by WyattL#3477.
+# No addons required.
+
+# Commands:
+# /crates, use /crates help for subcommand usage.
+
+# Permissions:
+# crates.use - Allows the user to set, view, and delete crates from sets. Useful for builders.
+# crates.modify - Allows the user to modify the items in a set, and give crate keys.
+
+
+function GiveCrateKey(p:player, s:text):
+    set {_i} to 1 tripwire hook
+    enchant {_i} with unbreaking 1
+    
+
+
+command /crates [<text="help">] [<text>] [<text>]:
+    permission: crates.use
+    usage: /crates help
+    description: Chest refill base command.
+    trigger:
+        if arg-1 is "help":
+            send "Crates Commands"
+            send "/crates setcrate <set> | Adds the chest you are looking at to the specified set."
+            send "/crates list <set> | View all the crates in the specified set."
+            send "/crates delcrate | Removes the chest you are looking at from it's set."
+            send "/crates sets | View all available sets."
+            if player has permission "crates.modify":
+                send "Elevated Commands"
+                send "/crates additem <set> | Adds the item you are holding to the specified set."
+                send "/crates items <set> | View all the items in the specified set."
+                send "/crates delitem <set> <integer> | Removes the specified item from the specified set."
+                send "/crates key <set> <player> | Give the specified player a key for the given set."
+        else if arg-1 is "setcrate":
+            set {_b} to the target block
+            if arg-2 is not set:
+                send "Usage: /crates setcrate <set> | Invalid set given."
+                stop
+            if arg-3 is set:
+                send "Error: Too many arguments! Usage: /crates setcrate <set> | Do not use spaces in set names."
+                stop
+            if {crates.sets::%arg-2%::*} contains {_b}'s position:
+                send "That block is already part of that set!"
+                stop
+            loop {crates.setMap::*}:
+                remove {_b}'s position from {crates.sets::%loop-value%::*}
+            
+            if {crates.setMap::*} does not contain arg-2:
+                add arg-2 to {crates.setMap::*}
+            
+            add {_b}'s position to {crates.sets::%arg-2%::*}
+            send "Block '%type of {_b}%' @ %{_b}'s position% has been added to set '%arg-2%'."
+        else if arg-1 is "view":
+            if arg-2 is not set:
+                send "Usage: /crates view <set> | Invalid set given."
+                stop
+            if {crates.setMap::*} does not contain arg-2:
+                send "Usage: /crates view <set> | Unknown set given."
+                stop
+            if size of {crates.sets::%arg-2%::*} < 1:
+                send "Usage: /crates view <set> | Empty set given."
+                stop
+            loop {crates.sets::%arg-2%::*}:
+                send "##%loop-index% '%type of block at loop-value%' @ %loop-value%"
+        else if arg-1 is "delchest":
+            set {_b} to the target block
+            set {_r} to false
+            loop {crates.setMap::*}:
+                if {crates.sets::%loop-value%::*} contains {_b}'s position:
+                    set {_r} to loop-value
+                    remove {_b}'s position from {crates.sets::%loop-value%::*}
+                    stop loop
+            if {_r} is not false:
+                send "Block '%type of {_b}%' @ %{_b}'s position% was removed from set '%{_r}%'."
+            else:
+                send "Block '%type of {_b}%' @ %{_b}'s position% is not part of any sets!"
+        else if arg-1 is "sets":
+            loop {crates.setMap::*}:
+                send "##%loop-index% '%loop-value%' with %size of {crates.sets::%loop-value%::*}% crates and %size of {crates.items::%loop-value%::*}% items which will reset every %{crates.time::%loop-value%}% and select between %{crates.min::%loop-value%}% and %{crates.max::%loop-value%}% items."
+        else if arg-1 is "additem":
+            if player does not have permission "crates.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /crates additem <set> | Invalid set given."
+                stop
+            if {crates.setMap::*} does not contain arg-2:
+                send "Usage: /crates additem <set> | Unknown set given."
+                stop
+            add player's tool to {crates.items::%arg-2%::*}
+            send "Item '%player's tool%' added to set '%arg-2%'."
+        else if arg-1 is "items":
+            if player does not have permission "crates.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /crates items <set> | Invalid set given."
+                stop
+            if {crates.setMap::*} does not contain arg-2:
+                send "Usage: /crates items <set> | Unknown set given."
+                stop
+            if size of {crates.items::%arg-2%::*} < 1:
+                send "Usage: /crates items <set> | Empty set given."
+                stop
+            clear {_itemstore::*}
+            loop {crates.items::%arg-2%::*}:
+                add 1 to {_itemstore::%loop-value%}
+            set {_dis} to 100 / (size of {crates.items::%arg-2%::*})
+            loop {crates.items::%arg-2%::*}:
+                send "##%loop-index%   %loop-value%   %{_dis} * {_itemstore::%loop-value%}%%%"
+        else if arg-1 is "delitem":
+            if player does not have permission "crates.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /crates delitem <set> <integer> | Invalid set given."
+                stop
+            if {crates.setMap::*} does not contain arg-2:
+                send "Usage: /crates delitem <set> <integer> | Unknown set given."
+                stop
+            if size of {crates.items::%arg-2%::*} < 1:
+                send "Usage: /crates delitem <set> <integer> | Empty set given."
+                stop
+            if arg-3 is not set:
+                send "Usage: /crates delitem <set> <integer> | Invalid integer given."
+                stop
+            set {_i} to arg-3 parsed as integer
+            if {_i} is not set:
+                send "Usage: /crates delitem <set> <integer> | Invalid integer given."
+                stop
+            set {_item} to {crates.items::%arg-2%::%{_i}%}
+            if {_item} is not set:
+                send "Usage: /crates delitem <set> <integer> | Integer is not a item."
+                stop
+            clear {crates.items::%arg-2%::%{_i}%}
+            send "Deleted item '%{_item}%' from set '%arg-2%'."
+        else if arg-1 is "key":
+            if player does not have permission "crates.modify":
+                send "Insufficent permission!"
+                stop
+            if arg-2 is not set:
+                send "Usage: /crates key <set> <timespan> | Invalid set given."
+                stop
+            if {crates.setMap::*} does not contain arg-2:
+                send "Usage: /crates key <set> <timespan> | Unknown set given."
+                stop
+            set {_p} to arg-3 parsed as player
+            if arg-3 is not set:
+                set {_p} to player
+            else if {_p} is not set:
+                send "Usage: /crates key <set> [player] | Unknown player given."
+                stop
+            GiveCrateKey({_p}, arg-2)
+            send "%{_p}% has been given a '%arg-2%' key."
+        else:
+            send "Invalid command: /crates help."
