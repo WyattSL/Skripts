@@ -43,12 +43,13 @@ function ConvPast(s:text) :: string:
 function BroadcastPunishment(p:offline player, t:text, r:text, d:timespan = 0.1 days):
     set {_ds} to ""
     if {_d} is not 0.1 days:
-        set {_ds} to " for %{_d}% "
-    broadcast "&7 "
-    broadcast "&c%{_t}%"
-    broadcast "&0-------------------------------------"
-    broadcast "&a%{_p}% &ewas %lowercase ConvPast({_t})%&a for &e%{_t}%&e I guess?"
-    broadcast "&7 "
+        set {_ds} to " with a duration of %{_d}%"
+#    broadcast "&7 "
+#    broadcast "&c%{_t}%"
+#    broadcast "&0-------------------------------------"
+#    broadcast "&a%{_p}% &ewas %lowercase ConvPast({_t})%&a for &e%{_t}%&e I guess?"
+#    broadcast "&7 "
+    broadcast "&c%{_p}% &e was %lowercase ConvPast({_t})%&e for &c%{_t}%&a%{_d}%&e."
 
 
 

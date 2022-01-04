@@ -1,5 +1,6 @@
 # Skript developed for Ikea by WyattL#3477.
-# No addons required.
+# Addons:
+# Skellet - Optional to hide the enchant "Unbreaking 1" on the crate keys. Necessary if enabled in the options.
 
 # Commands:
 # /crates, use /crates help for subcommand usage.
@@ -8,11 +9,16 @@
 # crates.use - Allows the user to set, view, and delete crates from sets. Useful for builders.
 # crates.modify - Allows the user to modify the items in a set, and give crate keys.
 
+options:
+    UseSkellet = false
+
 
 function GiveCrateKey(p:player, s:text):
     set {_i} to 1 tripwire hook
     enchant {_i} with unbreaking 1
-    
+    if {@UseSkellet} is true:
+        set {_i} to {_i} with hidden enchants
+    give {_p} {_i}
 
 
 command /crates [<text="help">] [<text>] [<text>]:
