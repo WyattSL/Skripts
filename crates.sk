@@ -1,7 +1,7 @@
 # Skript developed for Ikea by WyattL#3477.
 # Addons:
 # Skellet - Optional to hide the enchant "Unbreaking 1" on the crate keys. Necessary if enabled in the options.
-# TuSKe - Required for GUI support.
+# SkQuery - Required for GUI support.
 
 # Commands:
 # /crates, use /crates help for subcommand usage.
@@ -11,7 +11,7 @@
 # crates.modify - Allows the user to modify the items in a set, and give crate keys.
 
 options:
-    UseSkellet = false
+    UseSkellet : false
 
 
 function GiveCrateKey(p:player, s:text):
@@ -26,6 +26,7 @@ command /crates [<text="help">] [<text>] [<text>]:
     permission: crates.use
     usage: /crates help
     description: Chest refill base command.
+    aliases: /crate
     trigger:
         if arg-1 is "help":
             send "Crates Commands"
@@ -164,33 +165,55 @@ command /crates [<text="help">] [<text>] [<text>]:
         else:
             send "Invalid command: /crates help."
 
-on right click on chest:
-    set {_crate} to {crates.setPos::%target block's position%}
+on rightclick:
+    event-block is set
+    set {_crate} to {crates.setPos::%event-block's position%}
     {_crate} is set
-    if player is holding a tripwire hook with Unbreaking 1:
-        set {_kn} to replace " Crate Key" in name of player's tool with ""
+    cancel event
+    if player's tool is a tripwire hook:
+        set {_pti} to player's tool
+        set {_kn} to name of player's tool
+        replace every " Crate Key" in {_kn} with ""
         if {_kn} is not {_crate}:
             send "&cThis is a %{_crate}%&c crate, you have a %{_kn}%&c key."
             stop
-        open virtual chest inventory with size 3 named "%{_crate}% Crate" to player
-        loop 9*3 times:
-            format gui slot (loop-index - 1) of player with black stained glass pane named "<reset>" to do nothing
-        set {_item3} to random item out of {crates.items::%arg-2%}
-        set {_item2} to random item out of {crates.items::%arg-2%}
-        set {_item1} to random item out of {crates.items::%arg-2%}
-        loop 40 times:
+        open a new chest inventory with 3 rows named "%{_crate}% Crate" to player
+        loop 27 times:
+            format slot loop-number - 1 of player with black stained glass pane named "<reset>" to be unstealable
+        set {_item5} to random item out of {crates.items::%{_crate}%::*}
+        set {_item4} to random item out of {crates.items::%{_crate}%::*}
+        set {_item3} to random item out of {crates.items::%{_crate}%::*}
+        set {_item2} to random item out of {crates.items::%{_crate}%::*}
+        set {_item1} to random item out of {crates.items::%{_crate}%::*}
+        loop 30 times:
+            set {_item5} to {_item4}
+            set {_item4} to {_item3}
             set {_item3} to {_item2}
             set {_item2} to {_item1}
-            set {_item1} to random item out of {crates.items::%arg-2%}
-            format gui slot 12 of player with {_item3} to do nothing
-            format gui slot 13 of player with {_item2} to do nothing
-            format gui slot 14 of player with {_item1} to do nothing
-            wait 1 tick
-        format gui slot 12 of player with black stained glass pane named "<reset>" to do nothing
-        format gui slot 14 of player with black stained glass pane named "<reset>" to do nothing
-        format gui slot 13 of player with {_item2} to do nothing
+            set {_item1} to random item out of {crates.items::%{_crate}%::*}
+            player's inventory contains 1 of {_pti}
+            name of player's open inventory is "%{_crate}% Crate"
+            format slot 11 of player with {_item5} to be unstealable
+            format slot 12 of player with {_item4} to be unstealable
+            format slot 13 of player with {_item3} to be unstealable
+            format slot 14 of player with {_item2} to be unstealable
+            format slot 15 of player with {_item1} to be unstealable
+            set {_t} to 1 + (20 mod loop-number) * 0.25
+            wait "%{_t}% ticks" parsed as timespan
+        name of player's open inventory is "%{_crate}% Crate"
+        if player's inventory doesn't contain 1 of {_pti}:
+            close the inventory view of the player
+            stop
+        format slot 11 of player with black stained glass pane named "<reset>" to be unstealable
+        format slot 12 of player with black stained glass pane named "<reset>" to be unstealable
+        format slot 14 of player with black stained glass pane named "<reset>" to be unstealable
+        format slot 15 of player with black stained glass pane named "<reset>" to be unstealable
+        format slot 13 of player with {_item3} to be unstealable
+        player's inventory contains 1 of {_pti}
+        give player {_item3}
+        subtract 1 of {_pti} from player's inventory
         wait 2 seconds
-        give player {_item2}
+        name of player's open inventory is "%{_crate}% Crate"
         close the inventory view of player
     else:
         send "&cYou need a crate key for this!"
