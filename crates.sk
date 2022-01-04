@@ -216,4 +216,4 @@ on rightclick:
         name of player's open inventory is "%{_crate}% Crate"
         close the inventory view of player
     else:
-        send "&cYou need a crate key for this!"
+        send "&cYou need a crate key for this! (Only hold one at a time)"
